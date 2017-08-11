@@ -43,10 +43,6 @@ class PeopleFollower(object):
         self.sss = simple_script_server()
         # user to follow
         self.user = None
-        # distance between robot and people
-        self.distance_to_people = None
-        # allowed tolerance of the distance
-        self.margin = None
 
     def follow(self, msg):
         """
@@ -67,28 +63,12 @@ class PeopleFollower(object):
                 print "Detected person: {}".format(detection.label)
 
                 if detection.label == self.user:
-                    print people_angle # [0.30 -0.30] is good.
+                    print people_angle 
+                    
+                    # Rotate to that person 
+                    self.sss.move_base_rel("base", [0, 0, -people_angle])
 
-                    # Calculate the difference between people-robot distance and
-                    # desired distance
-                    diff = detection.pose.pose.position.z - \
-                        self.distance_to_people
-
-                    print "Difference {}".format(diff)
-
-                    # check if the robot should make translation
-                    if abs(diff) < self.margin:
-                        # the people is in margin, just rotate
-                        self.sss.move_base_rel("base", [0, 0, -people_angle])
-                    elif diff > 0:
-                        # the robot is too far away from people, go forward
-                        self.sss.move_base_rel(\
-                            "base", [diff, 0, -people_angle])
-                    else:
-                        # the robot is too close to people, go back
-                        self.sss.move_base_rel(\
-                            "base",[-diff, 0, 0])
-
+                    
     def face_callback(self, data):
         """
         Callback for face tracking message
@@ -101,15 +81,6 @@ def ask_user(follower):
     """
     # Get the name of the user that should be followed
     follower.user = raw_input("***\nEnter the name of the user: ")
-
-    # Get the distance and margin values
-    try:
-        follower.distance_to_people = float(
-            raw_input("***\nMinimum distance to people: ")
-            )
-    except Exception as err:
-        print err
-        raise
 
     return follower
 
