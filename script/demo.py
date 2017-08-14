@@ -43,6 +43,8 @@ class PeopleFollower(object):
         self.sss = simple_script_server()
         # user to follow
         self.user = None
+        # subscriber
+        self.subs = None
 
     def follow(self, msg):
         """
@@ -62,13 +64,21 @@ class PeopleFollower(object):
                 # Print detections
                 print "Detected person: {}".format(detection.label)
 
-                if detection.label == self.user:
-                    print people_angle 
-                    
-                    # Rotate to that person 
+                if detection.label == self.user and \
+                    np.absolute(people_angle) > 0.15:
+
+                    print people_angle
+
+                    self.subs.unregister()
+
+                    # Rotate to that person
                     self.sss.move_base_rel("base", [0, 0, -people_angle])
 
-                    
+                    # Subscribe to the face positions again
+                    self.subs= rospy.Subscriber("/detection_tracker/face_position_array",\
+                        DetectionArray, self.face_callback)
+
+
     def face_callback(self, data):
         """
         Callback for face tracking message
@@ -81,6 +91,10 @@ def ask_user(follower):
     """
     # Get the name of the user that should be followed
     follower.user = raw_input("***\nEnter the name of the user: ")
+
+    # Subscribe to the face positions
+    follower.subs = rospy.Subscriber("/detection_tracker/face_position_array",\
+            DetectionArray, follower.face_callback)
 
     return follower
 
@@ -97,10 +111,6 @@ def main():
 
     # ask user to follow
     follower = ask_user(follower)
-
-    # Subscribe to the face positions
-    rospy.Subscriber("/detection_tracker/face_position_array",\
-        DetectionArray, follower.face_callback)
 
     # endless loop
     rospy.spin()
